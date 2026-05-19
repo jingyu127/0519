@@ -48,23 +48,23 @@ function gotHands(results) {
 
 function draw() {
   // ---------------------------------------------------------
-  // 1. 影像鏡像處理：只有影像在畫出的時候翻轉，讓畫面像照鏡子一樣直覺
+  // 1. 影像鏡像處理：讓畫面像照鏡子一樣直覺
   // ---------------------------------------------------------
   push();
   translate(width, 0);
   scale(-1, 1);
   image(video, 0, 0, width, height);
-  pop(); // 畫完影像立刻還原座標軸，確保接下來的點位和文字位置正確
+  pop(); // 畫完影像立刻還原座標軸
 
   let detectedChoice = "未偵測到手勢";
 
   // ---------------------------------------------------------
-  // 2. 繪製點位與辨識：在正常座標軸下繪製，藍色點點就能精準對齊雙手
+  // 2. 繪製點位與辨識：手動將點位的 X 座標做鏡像翻轉 (width - x)
   // ---------------------------------------------------------
   if (hands.length > 0) {
     let hand = hands[0]; // 只抓畫面中的第一隻手
     if (hand.confidence > 0.3) {
-      drawHandKeypoints(hand);  // 畫出藍色關節點
+      drawHandKeypoints(hand);  // 呼叫修正後的畫點函式
       detectedChoice = judgeGesture(hand); // 計算目前手勢
     }
   }
@@ -73,13 +73,17 @@ function draw() {
   handleGameLogic(detectedChoice);
 }
 
-// 畫出手指關鍵點
+// 畫出手指關鍵點 (關鍵修正：將 X 座標翻轉對齊畫面)
 function drawHandKeypoints(hand) {
   for (let i = 0; i < hand.keypoints.length; i++) {
     let keypoint = hand.keypoints[i];
+    
+    // 核心修正：因為畫面左右翻轉了，點的 X 座標也要用總寬度去減，才會移到對應的左邊
+    let mirroredX = width - keypoint.x; 
+    
     fill(0, 255, 255);
     noStroke();
-    circle(keypoint.x, keypoint.y, 10);
+    circle(mirroredX, keypoint.y, 10);
   }
 }
 
