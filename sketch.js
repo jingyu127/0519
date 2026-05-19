@@ -19,11 +19,9 @@ function preload() {
 }
 
 function setup() {
-  // 建立畫布並指定放入 HTML 的 'canvas-holder' 容器中
   let canvas = createCanvas(640, 480);
   canvas.parent('canvas-holder');
 
-  // 啟動視訊，並加入針對手機前鏡頭的最佳化設定
   video = createCapture(VIDEO, {
     flipped: true,
     video: {
@@ -34,10 +32,8 @@ function setup() {
   });
   video.hide();
 
-  // 開始偵測手勢
   handPose.detectStart(video, gotHands);
 
-  // 更新網頁 UI 狀態
   document.getElementById('status').innerText = "AI 載入完成！點擊下方按鈕開始猜拳";
   document.getElementById('start-btn').disabled = false;
 }
@@ -47,25 +43,27 @@ function gotHands(results) {
 }
 
 function draw() {
-  // ---------------------------------------------------------
-  // 1. 影像鏡像處理：讓畫面像照鏡子一樣直覺
-  // ---------------------------------------------------------
+  // 1. 影像鏡像處理
   push();
   translate(width, 0);
   scale(-1, 1);
   image(video, 0, 0, width, height);
-  pop(); // 畫完影像立刻還原座標軸
+  pop(); 
 
   let detectedChoice = "未偵測到手勢";
 
-  // ---------------------------------------------------------
-  // 2. 繪製點位與辨識：手動將點位的 X 座標做鏡像翻轉 (width - x)
-  // ---------------------------------------------------------
   if (hands.length > 0) {
-    let hand = hands[0]; // 只抓畫面中的第一隻手
+    let hand = hands[0]; 
     if (hand.confidence > 0.3) {
-      drawHandKeypoints(hand);  // 呼叫修正後的畫點函式
-      detectedChoice = judgeGesture(hand); // 計算目前手勢
+      
+      // 【終極修正】直接在這裡把所有點位的 X 座標集體翻轉！
+      // 這樣不論是畫圖還是後面的 judgeGesture 猜拳邏輯，拿到的都會是正確對齊後的座標。
+      for (let i = 0; i < hand.keypoints.length; i++) {
+        hand.keypoints[i].x = width - hand.keypoints[i].x;
+      }
+
+      drawHandKeypoints(hand);  // 繪製對齊後的藍色點
+      detectedChoice = judgeGesture(hand); // 用對齊後的點判斷剪刀石頭布
     }
   }
 
@@ -73,17 +71,13 @@ function draw() {
   handleGameLogic(detectedChoice);
 }
 
-// 畫出手指關鍵點 (關鍵修正：將 X 座標翻轉對齊畫面)
+// 畫出手指關鍵點 (因為 X 座標在前面已經集體修正過，這裡直接用 .x 即可)
 function drawHandKeypoints(hand) {
   for (let i = 0; i < hand.keypoints.length; i++) {
     let keypoint = hand.keypoints[i];
-    
-    // 核心修正：因為畫面左右翻轉了，點的 X 座標也要用總寬度去減，才會移到對應的左邊
-    let mirroredX = width - keypoint.x; 
-    
     fill(0, 255, 255);
     noStroke();
-    circle(mirroredX, keypoint.y, 10);
+    circle(keypoint.x, keypoint.y, 10);
   }
 }
 
@@ -129,29 +123,24 @@ function handleGameLogic(detectedChoice) {
       countdownNum = 3 - Math.floor(elapsed / 1000);
       statusDiv.innerText = `剪刀、石頭... ${countdownNum}`;
       
-      // 在畫布中央大字顯示倒數數字
       fill(255, 235, 59);
       textSize(90);
       textAlign(CENTER, CENTER);
       text(countdownNum, width / 2, height / 2);
     } else {
-      // 3秒倒數結束，定格抓取這瞬間玩家的手勢
       playerChoice = detectedChoice;
       if (playerChoice !== "石頭" && playerChoice !== "剪刀" && playerChoice !== "布") {
-        playerChoice = "石頭"; // 如果沒比好，預設出石頭做防呆
+        playerChoice = "石頭"; 
       }
       
-      // 電腦隨機出拳
       let choices = ["剪刀", "石頭", "布"];
       computerChoice = random(choices);
       
-      // 判定這局誰輸誰贏
       calculateRound(playerChoice, computerChoice);
     }
   } 
   
   else if (gameState === "SHOW_RESULT") {
-    // 在畫布上畫出一層半透明黑色遮罩，方便看清結果文字
     rectMode(CENTER);
     fill(0, 0, 0, 160);
     rect(width / 2, height / 2, 480, 220, 15);
@@ -161,10 +150,9 @@ function handleGameLogic(detectedChoice) {
     textAlign(CENTER);
     text(`你出：${playerChoice}  vs  電腦出：${computerChoice}`, width / 2, height / 2 - 30);
     
-    // 根據單局輸贏改變文字顏色
-    if (roundResult.includes("你贏")) fill(76, 175, 80); // 綠色
-    else if (roundResult.includes("你輸")) fill(244, 67, 54); // 紅色
-    else fill(255); // 白色 (平手)
+    if (roundResult.includes("你贏")) fill(76, 175, 80); 
+    else if (roundResult.includes("你輸")) fill(244, 67, 54); 
+    else fill(255); 
     
     textSize(36);
     text(roundResult, width / 2, height / 2 + 30);
@@ -174,13 +162,12 @@ function handleGameLogic(detectedChoice) {
 // 當點擊 HTML 按鈕時觸發
 function startRound() {
   if (playerScore >= 2 || computerScore >= 2) {
-    // 如果上一次有人贏了，重新開局時分數歸零
     playerScore = 0;
     computerScore = 0;
     updateScoreBoard();
   }
   gameState = "COUNTDOWN";
-  timerEpoch = millis(); // 記錄開始倒數的時間點
+  timerEpoch = millis(); 
   document.getElementById('start-btn').disabled = true;
 }
 
@@ -202,19 +189,17 @@ function calculateRound(p, c) {
 
   updateScoreBoard();
 
-  // 判斷是否有人拿到兩勝（三戰兩勝制）
   if (playerScore === 2) {
-    document.getElementById('status').innerText = "🎉 恭喜！你贏得了最終勝利！";
+    document.getElementById('status').innerText = "🎉 恭喜！你贏建立了最終勝利！";
     gameState = "GAME_OVER";
     document.getElementById('start-btn').innerText = "再玩一次";
     document.getElementById('start-btn').disabled = false;
   } else if (computerScore === 2) {
-    document.getElementById('status').innerText = "💀 可惜！電腦贏得了最終勝利！";
+    document.getElementById('status').innerText = "💀 可惜！電腦贏建立了最終勝利！";
     gameState = "GAME_OVER";
     document.getElementById('start-btn').innerText = "再玩一次";
     document.getElementById('start-btn').disabled = false;
   } else {
-    // 只是單局結束，顯示結果 3.5 秒後自動回到準備狀態
     gameState = "SHOW_RESULT";
     document.getElementById('status').innerText = "準備下一局...";
     setTimeout(() => {
@@ -225,7 +210,6 @@ function calculateRound(p, c) {
   }
 }
 
-// 將分數同步更新到網頁 HTML 元素上
 function updateScoreBoard() {
   document.getElementById('player-score').innerText = playerScore;
   document.getElementById('computer-score').innerText = computerScore;
