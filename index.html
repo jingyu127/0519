@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 視訊猜拳大賽</title>
+    
+    <!-- 引入 p5.js 相關套件 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/addons/p5.sound.min.js"></script>
+    
+    <!-- 核心：引入新版 ml5.js 以支援 handPose -->
+    <script src="https://cdn.jsdelivr.net/npm/ml5@1.2.0/dist/ml5.min.js"></script>
+    
+    <!-- 引入樣式表 -->
+    <link rel="stylesheet" type="text/css" href="style.css">
+  </head>
+  <body>
+    <div id="game-container">
+      <h2>AI 視訊猜拳 (三戰兩勝)</h2>
+      
+      <!-- 分數板 -->
+      <div class="score-board">
+        <div>玩家 (你): <span id="player-score" style="color:#4caf50; font-weight:bold;">0</span> / 2</div>
+        <div>電腦: <span id="computer-score" style="color:#f44336; font-weight:bold;">0</span> / 2</div>
+      </div>
+
+      <!-- 狀態提示 -->
+      <div id="status" class="status-text">等待相機與 AI 載入...</div>
+
+      <!-- p5.js 畫布會自動被放入這個容器中 -->
+      <div id="canvas-holder"></div>
+
+      <!-- 控制按鈕 -->
+      <button id="start-btn" onclick="startRound()" disabled>請先載入模型</button>
+    </div>
+
+    <!-- 引入主要程式邏輯 -->
+    <script src="sketch.js"></script>
+  </body>
+</html>
