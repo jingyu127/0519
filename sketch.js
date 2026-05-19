@@ -22,11 +22,11 @@ function setup() {
   let canvas = createCanvas(640, 480);
   canvas.parent('canvas-holder');
 
-  // 啟動視訊，設定為前置鏡頭
+  // 啟動視訊，強制使用手機前置鏡頭
   video = createCapture(VIDEO, {
     flipped: true,
     video: {
-      facingMode: "user", // 強制使用手機前置鏡頭
+      facingMode: "user",
       width: { ideal: 640 },
       height: { ideal: 480 }
     }
@@ -44,7 +44,14 @@ function gotHands(results) {
 }
 
 function draw() {
-  // 直接正常繪製影像
+  // ---------------------------------------------------------
+  // 1. 影像與點位鏡像處理 (進入翻轉模式)
+  // ---------------------------------------------------------
+  push();
+  translate(width, 0);
+  scale(-1, 1); // 左右翻轉畫布
+
+  // 在翻轉模式下畫影像，畫面絕對是鏡像（照鏡子狀態）
   image(video, 0, 0, width, height);
 
   let detectedChoice = "未偵測到手勢";
@@ -52,34 +59,32 @@ function draw() {
   if (hands.length > 0) {
     let hand = hands[0]; 
     if (hand.confidence > 0.3) {
-      // 畫出對齊後的點位
+      // 在翻轉模式下畫點位，藍色點點會精準黏在手勢上，不會分離
       drawHandKeypoints(hand);  
       
-      // 用對齊後的點位計算猜拳結果
+      // 雖然點位畫出來是對的，但因為 ml5.js 的原始資料 X 座標相反
+      // 我們在傳入判斷前，先在背後用它的原始資料計算猜拳
       detectedChoice = judgeGesture(hand); 
     }
   }
+  pop(); // 【重要】畫完影像與點位立刻還原畫布，確保接下來的遊戲 UI 文字是正的
+  // ---------------------------------------------------------
 
-  // 3. 執行遊戲核心流程
+  // 2. 執行遊戲核心流程
   handleGameLogic(detectedChoice);
 }
 
-// 畫出手指關鍵點 (關鍵修正：只在繪製時計算鏡像 X，不改動原始資料)
+// 畫出手指關鍵點 (在 draw 的翻轉模式下執行，直接用點位原始座標即可精準對齊)
 function drawHandKeypoints(hand) {
   for (let i = 0; i < hand.keypoints.length; i++) {
     let keypoint = hand.keypoints[i];
-    
-    // 計算鏡像後的 X 座標
-    let mirroredX = width - keypoint.x;
-    
     fill(0, 255, 255);
     noStroke();
-    circle(mirroredX, keypoint.y, 10);
+    circle(keypoint.x, keypoint.y, 10);
   }
 }
 
 // 核心演算法：依據關鍵點的 Y 軸高度判定「剪刀、石頭、布」
-// (關鍵修正：這裡也改用 width - x 修正後的座標來做算術，確保辨識正確)
 function judgeGesture(hand) {
   let kp = hand.keypoints;
 
@@ -193,7 +198,7 @@ function calculateRound(p, c) {
     document.getElementById('start-btn').innerText = "再玩一次";
     document.getElementById('start-btn').disabled = false;
   } else if (computerScore === 2) {
-    document.getElementById('status').innerText = "💀 可惜！電腦贏建立了最終勝利！";
+    document.getElementById('status').innerText = "💀 可惜！電腦贏得了最終勝利！";
     gameState = "GAME_OVER";
     document.getElementById('start-btn').innerText = "再玩一次";
     document.getElementById('start-btn').disabled = false;
