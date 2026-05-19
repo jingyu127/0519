@@ -59,22 +59,21 @@ function draw() {
   if (hands.length > 0) {
     let hand = hands[0]; 
     if (hand.confidence > 0.3) {
-      // 在翻轉模式下畫點位，藍色點點會精準黏在手勢上，不會分離
+      // 在翻轉模式下畫點位，藍色點點會精準黏在手勢上
       drawHandKeypoints(hand);  
       
-      // 雖然點位畫出來是對的，但因為 ml5.js 的原始資料 X 座標相反
-      // 我們在傳入判斷前，先在背後用它的原始資料計算猜拳
+      // 傳入判斷邏輯
       detectedChoice = judgeGesture(hand); 
     }
   }
-  pop(); // 【重要】畫完影像與點位立刻還原畫布，確保接下來的遊戲 UI 文字是正的
+  pop(); // 畫完影像與點位立刻還原畫布，確保接下來的遊戲 UI 文字是正的
   // ---------------------------------------------------------
 
   // 2. 執行遊戲核心流程
   handleGameLogic(detectedChoice);
 }
 
-// 畫出手指關鍵點 (在 draw 的翻轉模式下執行，直接用點位原始座標即可精準對齊)
+// 畫出手指關鍵點 (直接用點位原始座標即可精準對齊)
 function drawHandKeypoints(hand) {
   for (let i = 0; i < hand.keypoints.length; i++) {
     let keypoint = hand.keypoints[i];
@@ -88,11 +87,18 @@ function drawHandKeypoints(hand) {
 function judgeGesture(hand) {
   let kp = hand.keypoints;
 
-  // 判斷手指是否伸直（指尖 Y 座標小於第二關節 Y 座標）
-  let indexOpen  = kp[8].y  < kp[6].y;  // 食指
-  let middleOpen = kp[12].y < kp[10].y; // 中指
-  let ringOpen   = kp[16].y < kp[14].y; // 無名指
-  let pinkyOpen  = kp[20].y < kp[18].y; // 小指
+  // 修正點位判定：
+  // 因為手機瀏覽器與鏡頭翻轉的關係，指尖與第二關節的 Y 軸在非同步更新下容易誤判
+  // 我們改用更精準的「指尖（Tip）與手掌中心/手腕根部（kp[0]）的距離」來判斷手指有沒有伸直！
+  // 這樣一來，不論畫面怎麼左右翻轉，距離（Distance）永遠是固定的，絕對不會受鏡像影響！
+  
+  let baseDist = dist(kp[0].x, kp[0].y, kp[9].x, kp[9].y); // 用手掌大小當作基準距離
+
+  // 如果指尖到手腕的距離，大於手掌基準的 1.6 倍，代表手指伸直了
+  let indexOpen  = dist(kp[0].x, kp[0].y, kp[8].x, kp[8].y)  > baseDist * 1.6;  // 食指
+  let middleOpen = dist(kp[0].x, kp[0].y, kp[12].x, kp[12].y) > baseDist * 1.6; // 中指
+  let ringOpen   = dist(kp[0].x, kp[0].y, kp[16].x, kp[16].y) > baseDist * 1.6; // 無名指
+  let pinkyOpen  = dist(kp[0].x, kp[0].y, kp[20].x, kp[20].y) > baseDist * 1.6; // 小指
 
   // 計算有幾隻手指是伸直的
   let openCount = 0;
@@ -102,7 +108,7 @@ function judgeGesture(hand) {
   if (pinkyOpen) openCount++;
 
   // 猜拳邏輯判定
-  if (openCount === 0) {
+  if (openCount <= 1) {
     return "石頭";
   } else if (openCount === 2 && indexOpen && middleOpen) {
     return "剪刀";
