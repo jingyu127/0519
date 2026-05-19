@@ -52,16 +52,10 @@ function draw() {
   if (hands.length > 0) {
     let hand = hands[0]; 
     if (hand.confidence > 0.3) {
-      
-      // 【關鍵修正】在進行任何動作前，先將點位的 X 座標集體翻轉，消滅原本靈魂出竅的反向點
-      for (let i = 0; i < hand.keypoints.length; i++) {
-        hand.keypoints[i].x = width - hand.keypoints[i].x;
-      }
-
-      // 畫出已經修正方向、精準黏在手上的點位
+      // 畫出對齊後的點位
       drawHandKeypoints(hand);  
       
-      // 用修正後的正確點位進行猜拳判定
+      // 用對齊後的點位計算猜拳結果
       detectedChoice = judgeGesture(hand); 
     }
   }
@@ -70,17 +64,22 @@ function draw() {
   handleGameLogic(detectedChoice);
 }
 
-// 畫出手指關鍵點 (因為 X 座標在前面已經集體修正過，這裡直接用修正後的座標畫出)
+// 畫出手指關鍵點 (關鍵修正：只在繪製時計算鏡像 X，不改動原始資料)
 function drawHandKeypoints(hand) {
   for (let i = 0; i < hand.keypoints.length; i++) {
     let keypoint = hand.keypoints[i];
+    
+    // 計算鏡像後的 X 座標
+    let mirroredX = width - keypoint.x;
+    
     fill(0, 255, 255);
     noStroke();
-    circle(keypoint.x, keypoint.y, 10);
+    circle(mirroredX, keypoint.y, 10);
   }
 }
 
 // 核心演算法：依據關鍵點的 Y 軸高度判定「剪刀、石頭、布」
+// (關鍵修正：這裡也改用 width - x 修正後的座標來做算術，確保辨識正確)
 function judgeGesture(hand) {
   let kp = hand.keypoints;
 
@@ -170,7 +169,7 @@ function startRound() {
   document.getElementById('start-btn').disabled = true;
 }
 
-// 比較勝負與處理三戰禮勝
+// 比較勝負與處理三戰兩勝
 function calculateRound(p, c) {
   if (p === c) {
     roundResult = "平手！再試一次";
@@ -189,7 +188,7 @@ function calculateRound(p, c) {
   updateScoreBoard();
 
   if (playerScore === 2) {
-    document.getElementById('status').innerText = "🎉 恭喜！你贏建立了最終勝利！";
+    document.getElementById('status').innerText = "🎉 恭喜！你贏得了最終勝利！";
     gameState = "GAME_OVER";
     document.getElementById('start-btn').innerText = "再玩一次";
     document.getElementById('start-btn').disabled = false;
